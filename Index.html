@@ -1,1 +1,209 @@
-# Mitra-Store-
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mitra Store</title>
+<style>
+body { font-family: Arial; margin:0; padding:0; background:#f2f2f2; }
+header { background:#4CAF50; color:white; padding:15px; text-align:center; font-size:24px; }
+nav { background:#333; overflow:hidden; }
+nav a { float:left; display:block; color:white; padding:14px 20px; text-decoration:none; }
+nav a:hover { background:#ddd; color:black; }
+.container { padding:15px; text-align:center; }
+.product { display:inline-block; background:white; margin:10px; padding:10px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); width:150px; vertical-align:top; }
+.product img { width:100%; border-radius:8px; }
+button { margin-top:5px; padding:5px 10px; border:none; background:#4CAF50; color:white; border-radius:5px; cursor:pointer; }
+#cart, #comments { background:white; padding:10px; border-radius:8px; margin-top:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1); text-align:left; }
+input, textarea { padding:5px; margin:3px; width:90%; }
+</style>
+</head>
+<body>
+
+<header>Mitra Store</header>
+
+<nav>
+  <a href="#">হোম</a>
+  <a href="#">প্রোডাক্ট</a>
+  <a href="#">যোগাযোগ</a>
+</nav>
+
+<div class="container">
+  <h2>প্রোডাক্ট তালিকা</h2>
+  <div id="products"></div>
+
+  <h3>নতুন প্রোডাক্ট যোগ করো</h3>
+  <input type="text" id="pName" placeholder="নাম">
+  <input type="text" id="pPrice" placeholder="মূল্য">
+  <input type="file" id="pImg" accept="image/*">
+  <input type="text" id="pPayment" placeholder="UPI/Payment Link">
+  <button onclick="addProduct()">যোগ করো</button>
+
+  <div id="cart">
+    <h3>কার্ট</h3>
+    <div id="cartItems"></div>
+    <p>মোট: <span id="total">0</span> টাকা</p>
+    <button onclick="clearCart()">Clear Cart</button>
+  </div>
+
+  <div id="comments">
+    <h3>কাস্টমার কমেন্ট</h3>
+    <textarea id="commentText" placeholder="কমেন্ট লিখুন"></textarea><br>
+    <button onclick="addComment()">Add Comment</button>
+    <div id="commentList"></div>
+  </div>
+</div>
+
+<footer style="text-align:center; padding:10px; background:#333; color:white; margin-top:20px;">
+© ২০২৫ Mitra Store
+</footer>
+
+<script>
+let productList = JSON.parse(localStorage.getItem('products')) || [
+  {name:"প্রোডাক্ট ১", price:200, img:"https://picsum.photos/150?1", payment:"upi://pay?pa=example@upi"},
+  {name:"প্রোডাক্ট ২", price:400, img:"https://picsum.photos/150?2", payment:"upi://pay?pa=example@upi"}
+];
+let cart = JSON.parse(localStorage.getItem('cart')) || [];
+let comments = JSON.parse(localStorage.getItem('comments')) || [];
+
+const productsDiv = document.getElementById("products");
+const cartItemsDiv = document.getElementById("cartItems");
+const totalSpan = document.getElementById("total");
+const commentListDiv = document.getElementById("commentList");
+
+function saveLocal(){
+  localStorage.setItem('products', JSON.stringify(productList));
+  localStorage.setItem('cart', JSON.stringify(cart));
+  localStorage.setItem('comments', JSON.stringify(comments));
+}
+
+function showProducts() {
+  productsDiv.innerHTML = "";
+  productList.forEach((product,index) => {
+    const div = document.createElement("div");
+    div.className = "product";
+    div.innerHTML = `
+      <img src="${product.img}" alt="${product.name}">
+      <h3>${product.name}</h3>
+      <p>মূল্য: ${product.price} টাকা</p>
+      <button onclick="addToCart(${index})">Add to Cart</button>
+      <button onclick="editProduct(${index})">Edit</button>
+      <button onclick="deleteProduct(${index})">Delete</button>
+      <br>
+      <a href="${product.payment}" target="_blank"><button>Pay/UPI</button></a>
+    `;
+    productsDiv.appendChild(div);
+  });
+}
+
+function addProduct() {
+  const name = document.getElementById("pName").value;
+  const price = parseInt(document.getElementById("pPrice").value);
+  const payment = document.getElementById("pPayment").value || "#";
+  const fileInput = document.getElementById("pImg");
+  if(!name || !price){
+    alert("নাম ও মূল্য অবশ্যই দিতে হবে!");
+    return;
+  }
+  if(fileInput.files.length === 0){
+    alert("ছবি আপলোড করুন!");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const imgData = e.target.result;
+    productList.push({name, price, img:imgData, payment});
+    saveLocal();
+    showProducts();
+    document.getElementById("pName").value="";
+    document.getElementById("pPrice").value="";
+    document.getElementById("pPayment").value="";
+    fileInput.value = "";
+  }
+  reader.readAsDataURL(fileInput.files[0]);
+}
+
+function editProduct(index){
+  const name = prompt("নতুন নাম লিখুন:", productList[index].name);
+  const price = prompt("নতুন মূল্য লিখুন:", productList[index].price);
+  const payment = prompt("নতুন Payment লিঙ্ক লিখুন:", productList[index].payment);
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+  fileInput.onchange = function(){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      productList[index] = {
+        name,
+        price: parseInt(price),
+        img: e.target.result,
+        payment
+      };
+      saveLocal();
+      showProducts();
+    }
+    reader.readAsDataURL(fileInput.files[0]);
+  }
+  if(fileInput){
+    fileInput.click();
+  }
+}
+
+function deleteProduct(index){
+  if(confirm("আপনি কি এই প্রোডাক্ট ডিলিট করতে চান?")){
+    productList.splice(index,1);
+    saveLocal();
+    showProducts();
+  }
+}
+
+function addToCart(index){
+  cart.push(productList[index]);
+  saveLocal();
+  updateCart();
+}
+
+function updateCart(){
+  cartItemsDiv.innerHTML = "";
+  let total = 0;
+  cart.forEach(item => {
+    cartItemsDiv.innerHTML += `<p>${item.name} - ${item.price} টাকা</p>`;
+    total += item.price;
+  });
+  totalSpan.innerText = total;
+}
+
+function clearCart(){
+  cart = [];
+  saveLocal();
+  updateCart();
+}
+
+function addComment(){
+  const text = document.getElementById("commentText").value;
+  if(text){
+    comments.push(text);
+    saveLocal();
+    renderComments();
+    document.getElementById("commentText").value="";
+  } else {
+    alert("কমেন্ট লিখুন!");
+  }
+}
+
+function renderComments(){
+  commentListDiv.innerHTML = "";
+  comments.forEach(c => {
+    commentListDiv.innerHTML += `<p>- ${c}</p>`;
+  });
+}
+
+// প্রথমে লোডের সময় দেখাও
+showProducts();
+updateCart();
+renderComments();
+</script>
+
+</body>
+</html>
+
