@@ -2,121 +2,99 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Mitra Store</title>
+  <title>Mitra Store - User</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
     h1 { text-align: center; }
-    .hidden { display: none; }
     .product { border: 1px solid #ddd; padding: 10px; margin: 10px; background: #fff; }
     .btn { padding: 5px 10px; margin: 2px; cursor: pointer; }
-    .admin-panel, .user-panel { margin-top: 20px; }
-    input, textarea { margin: 5px 0; width: 100%; padding: 5px; }
     img { max-width: 120px; display: block; margin-top: 5px; }
+    #cart, #comments { background:white; padding:10px; margin-top:20px; border-radius:8px;}
+    textarea{width:95%; padding:5px; margin-top:5px;}
   </style>
 </head>
 <body>
   <h1>🛒 Mitra Store</h1>
-  <button id="toggleMode" class="btn">Switch to Admin</button>
 
-  <!-- User Panel -->
-  <div id="userPanel" class="user-panel">
-    <h2>Products</h2>
-    <div id="productList"></div>
+  <h2>Products</h2>
+  <div id="productList"></div>
+
+  <div id="cart">
+    <h3>Cart</h3>
+    <div id="cartItems"></div>
+    <p>Total: ₹<span id="total">0</span></p>
+    <button onclick="clearCart()">Clear Cart</button>
   </div>
 
-  <!-- Admin Panel -->
-  <div id="adminPanel" class="admin-panel hidden">
-    <h2>Admin Panel</h2>
-    <input type="text" id="pName" placeholder="Product Name">
-    <input type="text" id="pPrice" placeholder="Price">
-    <input type="file" id="pImage">
-    <input type="text" id="pUpi" placeholder="UPI ID (e.g. name@upi)">
-    <button onclick="addProduct()" class="btn">Add Product</button>
-    <h3>Manage Products</h3>
-    <div id="adminProductList"></div>
+  <div id="comments">
+    <h3>Comments</h3>
+    <textarea id="commentText" placeholder="Write your comment"></textarea><br>
+    <button onclick="addComment()">Add Comment</button>
+    <div id="commentList"></div>
   </div>
 
   <script>
     let products = JSON.parse(localStorage.getItem("products")) || [];
-    let isAdmin = false;
+    let cart = JSON.parse(localStorage.getItem("cart")) || [];
+    let comments = JSON.parse(localStorage.getItem("comments")) || [];
 
-    function saveProducts() {
-      localStorage.setItem("products", JSON.stringify(products));
-      renderProducts();
-    }
-
-    function addProduct() {
-      const name = document.getElementById("pName").value;
-      const price = document.getElementById("pPrice").value;
-      const imageFile = document.getElementById("pImage").files[0];
-      const upi = document.getElementById("pUpi").value;
-
-      if(name && price && imageFile && upi) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          products.push({ name, price, image: e.target.result, upi, enabled: true });
-          saveProducts();
-        };
-        reader.readAsDataURL(imageFile);
-
-        document.getElementById("pName").value = "";
-        document.getElementById("pPrice").value = "";
-        document.getElementById("pImage").value = "";
-        document.getElementById("pUpi").value = "";
-      }
-    }
-
-    function deleteProduct(index) {
-      products.splice(index, 1);
-      saveProducts();
-    }
-
-    function toggleProduct(index) {
-      products[index].enabled = !products[index].enabled;
-      saveProducts();
+    function saveData() {
+      localStorage.setItem("cart", JSON.stringify(cart));
+      localStorage.setItem("comments", JSON.stringify(comments));
     }
 
     function renderProducts() {
-      const userList = document.getElementById("productList");
-      const adminList = document.getElementById("adminProductList");
-      userList.innerHTML = "";
-      adminList.innerHTML = "";
-
-      products.forEach((p, i) => {
-        if(p.enabled) {
+      const div = document.getElementById("productList");
+      div.innerHTML = "";
+      products.forEach(p => {
+        if(p.enabled){
           let upiLink = `upi://pay?pa=${p.upi}&pn=MitraStore&am=${p.price}`;
-          userList.innerHTML += `
+          div.innerHTML += `
             <div class="product">
               <h3>${p.name}</h3>
               <p>Price: ₹${p.price}</p>
               <img src="${p.image}">
-              <button class="btn">Add to Cart</button>
+              <button class="btn" onclick="addToCart('${p.name}')">Add to Cart</button>
               <a href="${upiLink}" class="btn">Pay with UPI</a>
             </div>`;
         }
-
-        adminList.innerHTML += `
-          <div class="product">
-            <h3>${p.name}</h3>
-            <p>Price: ₹${p.price}</p>
-            <p>UPI: ${p.upi}</p>
-            <img src="${p.image}">
-            <button onclick="deleteProduct(${i})" class="btn">Delete</button>
-            <button onclick="toggleProduct(${i})" class="btn">
-              ${p.enabled ? "Disable" : "Enable"}
-            </button>
-          </div>`;
       });
     }
 
-    document.getElementById("toggleMode").addEventListener("click", () => {
-      isAdmin = !isAdmin;
-      document.getElementById("adminPanel").classList.toggle("hidden", !isAdmin);
-      document.getElementById("userPanel").classList.toggle("hidden", isAdmin);
-      document.getElementById("toggleMode").innerText = isAdmin ? "Switch to User" : "Switch to Admin";
-    });
+    function addToCart(name){
+      const product = products.find(p => p.name === name);
+      if(product) { cart.push(product); updateCart(); saveData(); }
+    }
 
-    renderProducts();
+    function updateCart(){
+      const div = document.getElementById("cartItems");
+      let total = 0;
+      div.innerHTML = "";
+      cart.forEach(item => {
+        div.innerHTML += `<p>${item.name} - ₹${item.price}</p>`;
+        total += +item.price;
+      });
+      document.getElementById("total").innerText = total;
+    }
+
+    function clearCart(){ cart=[]; updateCart(); saveData(); }
+
+    function addComment(){
+      const text = document.getElementById("commentText").value;
+      if(text){ comments.push(text); saveData(); renderComments(); document.getElementById("commentText").value=""; }
+    }
+
+    function renderComments(){
+      const div = document.getElementById("commentList");
+      div.innerHTML = "";
+      comments.forEach(c => div.innerHTML += `<p>- ${c}</p>`);
+    }
+
+    document.addEventListener("DOMContentLoaded", ()=>{
+      renderProducts();
+      updateCart();
+      renderComments();
+    });
   </script>
 </body>
 </html>
