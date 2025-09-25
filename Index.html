@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mitra Store - User</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+    h1 { text-align: center; }
+    .product { border: 1px solid #ddd; padding: 10px; margin: 10px; background: #fff; }
+    .btn { padding: 5px 10px; margin: 2px; cursor: pointer; }
+    img { max-width: 120px; display: block; margin-top: 5px; }
+    #cart, #comments { background:white; padding:10px; margin-top:20px; border-radius:8px;}
+    textarea{width:95%; padding:5px; margin-top:5px;}
+  </style>
+</head>
+<body>
+  <h1>🛒 Mitra Store</h1>
+
+  <h2>Products</h2>
+  <div id="productList"></div>
+
+  <div id="cart">
+    <h3>Cart</h3>
+    <div id="cartItems"></div>
+    <p>Total: ₹<span id="total">0</span></p>
+    <button onclick="clearCart()">Clear Cart</button>
+  </div>
+
+  <div id="comments">
+    <h3>Comments</h3>
+    <textarea id="commentText" placeholder="Write your comment"></textarea><br>
+    <button onclick="addComment()">Add Comment</button>
+    <div id="commentList"></div>
+  </div>
+
+  <script>
+    let products = JSON.parse(localStorage.getItem("products")) || [];
+    let cart = JSON.parse(localStorage.getItem("cart")) || [];
+    let comments = JSON.parse(localStorage.getItem("comments")) || [];
+
+    function saveData() {
+      localStorage.setItem("cart", JSON.stringify(cart));
+      localStorage.setItem("comments", JSON.stringify(comments));
+    }
+
+    function renderProducts() {
+      const div = document.getElementById("productList");
+      div.innerHTML = "";
+      products.forEach(p => {
+        if(p.enabled){
+          let upiLink = `upi://pay?pa=${p.upi}&pn=MitraStore&am=${p.price}`;
+          div.innerHTML += `
+            <div class="product">
+              <h3>${p.name}</h3>
+              <p>Price: ₹${p.price}</p>
+              <img src="${p.image}">
+              <button class="btn" onclick="addToCart('${p.name}')">Add to Cart</button>
+              <a href="${upiLink}" class="btn">Pay with UPI</a>
+            </div>`;
+        }
+      });
+    }
+
+    function addToCart(name){
+      const product = products.find(p => p.name === name);
+      if(product) { cart.push(product); updateCart(); saveData(); }
+    }
+
+    function updateCart(){
+      const div = document.getElementById("cartItems");
+      let total = 0;
+      div.innerHTML = "";
+      cart.forEach(item => {
+        div.innerHTML += `<p>${item.name} - ₹${item.price}</p>`;
+        total += +item.price;
+      });
+      document.getElementById("total").innerText = total;
+    }
+
+    function clearCart(){ cart=[]; updateCart(); saveData(); }
+
+    function addComment(){
+      const text = document.getElementById("commentText").value;
+      if(text){ comments.push(text); saveData(); renderComments(); document.getElementById("commentText").value=""; }
+    }
+
+    function renderComments(){
+      const div = document.getElementById("commentList");
+      div.innerHTML = "";
+      comments.forEach(c => div.innerHTML += `<p>- ${c}</p>`);
+    }
+
+    document.addEventListener("DOMContentLoaded", ()=>{
+      renderProducts();
+      updateCart();
+      renderComments();
+    });
+  </script>
+</body>
+</html>
