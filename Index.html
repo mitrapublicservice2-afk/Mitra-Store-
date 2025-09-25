@@ -1,209 +1,122 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mitra Store</title>
-<style>
-body { font-family: Arial; margin:0; padding:0; background:#f2f2f2; }
-header { background:#4CAF50; color:white; padding:15px; text-align:center; font-size:24px; }
-nav { background:#333; overflow:hidden; }
-nav a { float:left; display:block; color:white; padding:14px 20px; text-decoration:none; }
-nav a:hover { background:#ddd; color:black; }
-.container { padding:15px; text-align:center; }
-.product { display:inline-block; background:white; margin:10px; padding:10px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); width:150px; vertical-align:top; }
-.product img { width:100%; border-radius:8px; }
-button { margin-top:5px; padding:5px 10px; border:none; background:#4CAF50; color:white; border-radius:5px; cursor:pointer; }
-#cart, #comments { background:white; padding:10px; border-radius:8px; margin-top:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1); text-align:left; }
-input, textarea { padding:5px; margin:3px; width:90%; }
-</style>
+  <meta charset="UTF-8">
+  <title>Mitra Store</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+    h1 { text-align: center; }
+    .hidden { display: none; }
+    .product { border: 1px solid #ddd; padding: 10px; margin: 10px; background: #fff; }
+    .btn { padding: 5px 10px; margin: 2px; cursor: pointer; }
+    .admin-panel, .user-panel { margin-top: 20px; }
+    input, textarea { margin: 5px 0; width: 100%; padding: 5px; }
+    img { max-width: 120px; display: block; margin-top: 5px; }
+  </style>
 </head>
 <body>
+  <h1>🛒 Mitra Store</h1>
+  <button id="toggleMode" class="btn">Switch to Admin</button>
 
-<header>Mitra Store</header>
-
-<nav>
-  <a href="#">হোম</a>
-  <a href="#">প্রোডাক্ট</a>
-  <a href="#">যোগাযোগ</a>
-</nav>
-
-<div class="container">
-  <h2>প্রোডাক্ট তালিকা</h2>
-  <div id="products"></div>
-
-  <h3>নতুন প্রোডাক্ট যোগ করো</h3>
-  <input type="text" id="pName" placeholder="নাম">
-  <input type="text" id="pPrice" placeholder="মূল্য">
-  <input type="file" id="pImg" accept="image/*">
-  <input type="text" id="pPayment" placeholder="UPI/Payment Link">
-  <button onclick="addProduct()">যোগ করো</button>
-
-  <div id="cart">
-    <h3>কার্ট</h3>
-    <div id="cartItems"></div>
-    <p>মোট: <span id="total">0</span> টাকা</p>
-    <button onclick="clearCart()">Clear Cart</button>
+  <!-- User Panel -->
+  <div id="userPanel" class="user-panel">
+    <h2>Products</h2>
+    <div id="productList"></div>
   </div>
 
-  <div id="comments">
-    <h3>কাস্টমার কমেন্ট</h3>
-    <textarea id="commentText" placeholder="কমেন্ট লিখুন"></textarea><br>
-    <button onclick="addComment()">Add Comment</button>
-    <div id="commentList"></div>
+  <!-- Admin Panel -->
+  <div id="adminPanel" class="admin-panel hidden">
+    <h2>Admin Panel</h2>
+    <input type="text" id="pName" placeholder="Product Name">
+    <input type="text" id="pPrice" placeholder="Price">
+    <input type="file" id="pImage">
+    <input type="text" id="pUpi" placeholder="UPI ID (e.g. name@upi)">
+    <button onclick="addProduct()" class="btn">Add Product</button>
+    <h3>Manage Products</h3>
+    <div id="adminProductList"></div>
   </div>
-</div>
 
-<footer style="text-align:center; padding:10px; background:#333; color:white; margin-top:20px;">
-© ২০২৫ Mitra Store
-</footer>
+  <script>
+    let products = JSON.parse(localStorage.getItem("products")) || [];
+    let isAdmin = false;
 
-<script>
-let productList = JSON.parse(localStorage.getItem('products')) || [
-  {name:"প্রোডাক্ট ১", price:200, img:"https://picsum.photos/150?1", payment:"upi://pay?pa=example@upi"},
-  {name:"প্রোডাক্ট ২", price:400, img:"https://picsum.photos/150?2", payment:"upi://pay?pa=example@upi"}
-];
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
-let comments = JSON.parse(localStorage.getItem('comments')) || [];
-
-const productsDiv = document.getElementById("products");
-const cartItemsDiv = document.getElementById("cartItems");
-const totalSpan = document.getElementById("total");
-const commentListDiv = document.getElementById("commentList");
-
-function saveLocal(){
-  localStorage.setItem('products', JSON.stringify(productList));
-  localStorage.setItem('cart', JSON.stringify(cart));
-  localStorage.setItem('comments', JSON.stringify(comments));
-}
-
-function showProducts() {
-  productsDiv.innerHTML = "";
-  productList.forEach((product,index) => {
-    const div = document.createElement("div");
-    div.className = "product";
-    div.innerHTML = `
-      <img src="${product.img}" alt="${product.name}">
-      <h3>${product.name}</h3>
-      <p>মূল্য: ${product.price} টাকা</p>
-      <button onclick="addToCart(${index})">Add to Cart</button>
-      <button onclick="editProduct(${index})">Edit</button>
-      <button onclick="deleteProduct(${index})">Delete</button>
-      <br>
-      <a href="${product.payment}" target="_blank"><button>Pay/UPI</button></a>
-    `;
-    productsDiv.appendChild(div);
-  });
-}
-
-function addProduct() {
-  const name = document.getElementById("pName").value;
-  const price = parseInt(document.getElementById("pPrice").value);
-  const payment = document.getElementById("pPayment").value || "#";
-  const fileInput = document.getElementById("pImg");
-  if(!name || !price){
-    alert("নাম ও মূল্য অবশ্যই দিতে হবে!");
-    return;
-  }
-  if(fileInput.files.length === 0){
-    alert("ছবি আপলোড করুন!");
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const imgData = e.target.result;
-    productList.push({name, price, img:imgData, payment});
-    saveLocal();
-    showProducts();
-    document.getElementById("pName").value="";
-    document.getElementById("pPrice").value="";
-    document.getElementById("pPayment").value="";
-    fileInput.value = "";
-  }
-  reader.readAsDataURL(fileInput.files[0]);
-}
-
-function editProduct(index){
-  const name = prompt("নতুন নাম লিখুন:", productList[index].name);
-  const price = prompt("নতুন মূল্য লিখুন:", productList[index].price);
-  const payment = prompt("নতুন Payment লিঙ্ক লিখুন:", productList[index].payment);
-  const fileInput = document.createElement("input");
-  fileInput.type = "file";
-  fileInput.accept = "image/*";
-  fileInput.onchange = function(){
-    const reader = new FileReader();
-    reader.onload = function(e){
-      productList[index] = {
-        name,
-        price: parseInt(price),
-        img: e.target.result,
-        payment
-      };
-      saveLocal();
-      showProducts();
+    function saveProducts() {
+      localStorage.setItem("products", JSON.stringify(products));
+      renderProducts();
     }
-    reader.readAsDataURL(fileInput.files[0]);
-  }
-  if(fileInput){
-    fileInput.click();
-  }
-}
 
-function deleteProduct(index){
-  if(confirm("আপনি কি এই প্রোডাক্ট ডিলিট করতে চান?")){
-    productList.splice(index,1);
-    saveLocal();
-    showProducts();
-  }
-}
+    function addProduct() {
+      const name = document.getElementById("pName").value;
+      const price = document.getElementById("pPrice").value;
+      const imageFile = document.getElementById("pImage").files[0];
+      const upi = document.getElementById("pUpi").value;
 
-function addToCart(index){
-  cart.push(productList[index]);
-  saveLocal();
-  updateCart();
-}
+      if(name && price && imageFile && upi) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          products.push({ name, price, image: e.target.result, upi, enabled: true });
+          saveProducts();
+        };
+        reader.readAsDataURL(imageFile);
 
-function updateCart(){
-  cartItemsDiv.innerHTML = "";
-  let total = 0;
-  cart.forEach(item => {
-    cartItemsDiv.innerHTML += `<p>${item.name} - ${item.price} টাকা</p>`;
-    total += item.price;
-  });
-  totalSpan.innerText = total;
-}
+        document.getElementById("pName").value = "";
+        document.getElementById("pPrice").value = "";
+        document.getElementById("pImage").value = "";
+        document.getElementById("pUpi").value = "";
+      }
+    }
 
-function clearCart(){
-  cart = [];
-  saveLocal();
-  updateCart();
-}
+    function deleteProduct(index) {
+      products.splice(index, 1);
+      saveProducts();
+    }
 
-function addComment(){
-  const text = document.getElementById("commentText").value;
-  if(text){
-    comments.push(text);
-    saveLocal();
-    renderComments();
-    document.getElementById("commentText").value="";
-  } else {
-    alert("কমেন্ট লিখুন!");
-  }
-}
+    function toggleProduct(index) {
+      products[index].enabled = !products[index].enabled;
+      saveProducts();
+    }
 
-function renderComments(){
-  commentListDiv.innerHTML = "";
-  comments.forEach(c => {
-    commentListDiv.innerHTML += `<p>- ${c}</p>`;
-  });
-}
+    function renderProducts() {
+      const userList = document.getElementById("productList");
+      const adminList = document.getElementById("adminProductList");
+      userList.innerHTML = "";
+      adminList.innerHTML = "";
 
-// প্রথমে লোডের সময় দেখাও
-showProducts();
-updateCart();
-renderComments();
-</script>
+      products.forEach((p, i) => {
+        if(p.enabled) {
+          let upiLink = `upi://pay?pa=${p.upi}&pn=MitraStore&am=${p.price}`;
+          userList.innerHTML += `
+            <div class="product">
+              <h3>${p.name}</h3>
+              <p>Price: ₹${p.price}</p>
+              <img src="${p.image}">
+              <button class="btn">Add to Cart</button>
+              <a href="${upiLink}" class="btn">Pay with UPI</a>
+            </div>`;
+        }
 
+        adminList.innerHTML += `
+          <div class="product">
+            <h3>${p.name}</h3>
+            <p>Price: ₹${p.price}</p>
+            <p>UPI: ${p.upi}</p>
+            <img src="${p.image}">
+            <button onclick="deleteProduct(${i})" class="btn">Delete</button>
+            <button onclick="toggleProduct(${i})" class="btn">
+              ${p.enabled ? "Disable" : "Enable"}
+            </button>
+          </div>`;
+      });
+    }
+
+    document.getElementById("toggleMode").addEventListener("click", () => {
+      isAdmin = !isAdmin;
+      document.getElementById("adminPanel").classList.toggle("hidden", !isAdmin);
+      document.getElementById("userPanel").classList.toggle("hidden", isAdmin);
+      document.getElementById("toggleMode").innerText = isAdmin ? "Switch to User" : "Switch to Admin";
+    });
+
+    renderProducts();
+  </script>
 </body>
 </html>
-
